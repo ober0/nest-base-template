@@ -1,6 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { IsArray, IsBoolean, IsEmail, IsNumber, IsOptional, IsString } from 'class-validator'
 
+export class HashDto {
+    @ApiProperty()
+    hash: string
+}
+
+export class ResendConfirmCodeDto extends HashDto {
+    @ApiProperty({ description: "action: 'signin' | 'signup' | 'change-email' | 'change-password' | 'deactivate' | 'activate' | 'delete' | 'change-password-no-auth' | 'twoFactor'" })
+    action: 'signin' | 'signup' | 'change-email' | 'change-password' | 'deactivate' | 'activate' | 'delete' | 'change-password-no-auth' | 'twoFactor'
+}
+
 export class SignUpUserDto {
     @ApiProperty()
     @IsString()
@@ -24,20 +34,10 @@ export class SignUpUserDto {
     password: string
 }
 
-export class HashDto {
-    @ApiProperty()
-    hash: string
-}
-
 export class ConfirmSignUpUserDto extends HashDto {
     @ApiProperty()
     @IsNumber()
     code: number
-}
-
-export class ResendConfirmCodeDto extends HashDto {
-    @ApiProperty({ description: "action: 'signin' | 'signup' | 'change-email' | 'change-password' | 'deactivate' | 'activate' | 'delete' | 'change-password-no-auth' | 'twoFactor'" })
-    action: 'signin' | 'signup' | 'change-email' | 'change-password' | 'deactivate' | 'activate' | 'delete' | 'change-password-no-auth' | 'twoFactor'
 }
 
 export class SignUpResponseUserDto extends HashDto {

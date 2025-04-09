@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PasswordService } from '../password/password.service'
 import { TokenService } from '../token/token.service'
 import { RedisService } from '../redis/redis.service'
@@ -31,117 +31,104 @@ export class AuthService {
         return hash.substring(0, length)
     }
 
-    async signUp(userDto: SignUpUserDto) {
-        const user = await this.userRepository.findOneByEmail(userDto.email)
+    private async ensureUserByEmail(email: string) {
+        const user = this.userRepository.findOneByEmail(email)
         if (user) {
             throw new ConflictException('Пользователь с таким email уже существует')
         }
+    }
 
-        const code: number = this.generateVerificationCode()
+    async signUp(userDto: SignUpUserDto) {
+        const email = userDto.email
+        const password = userDto.password
 
-        const hash: string = await this.generateHash()
+        const [, code, hash] = await Promise.all([this.ensureUserByEmail(email), this.generateVerificationCode(), this.generateHash(), this.passwordService.validate(password)])
 
-        await this.passwordService.validate(userDto.password)
-
-        const userData: string = JSON.stringify({ ...userDto, code })
+        const userData = JSON.stringify({ ...userDto, code })
 
         await this.redis.set(`signup-${hash}`, userData, 300)
 
-        await this.smtpService.send(userDto.email, `Ваш код подтверждения: ${code}`, 'Код для подтверждения создания аккаунта')
-        const data: SignUpResponseUserDto = {
-            msg: 'Код отправляется',
-            hash
-        }
-        return data
-    }
-
-    async confirmSignUp(confirmUserDto: ConfirmSignUpUserDto) {
-        const userDataString = await this.redis.get(`signup-${confirmUserDto.hash}`)
-
-        if (!userDataString || typeof userDataString !== 'string') {
-            throw new NotFoundException('Неверный хэш')
-        }
-
-        const userDataJson = JSON.parse(userDataString)
-        const { code, ...userDto } = userDataJson
-
-        if (Number(code) !== confirmUserDto.code) {
-            throw new BadRequestException('Неверный код')
-        }
-
-        await this.redis.delete(`signup-${confirmUserDto.hash}`)
-        const { uuid, email } = await this.userService.create(userDto)
-
-        this.logger.log(`Пользователь ${userDto.email} зарегистрировался`)
+        await this.smtpService.send(email, `Ваш код подтверждения: ${code}`, 'Код для подтверждения создания аккаунта')
 
         return {
-            accessToken: await this.tokenService.generateAccessToken(uuid, email),
-            refreshToken: await this.tokenService.generateRefreshToken(uuid, email)
+            msg: 'Код отправляется',
+            hash
+        } satisfies SignUpResponseUserDto
+    }
+
+    async confirmSignUp({ hash, code: inputCode }: ConfirmSignUpUserDto) {
+        const redisKey = `signup-${hash}`
+        const cachedData = await this.redis.get(redisKey)
+
+        if (!cachedData || typeof cachedData !== 'string') {
+            throw new NotFoundException('Недействительный или просроченный хэш')
+        }
+
+        const parsedData = JSON.parse(cachedData)
+        const { code: expectedCode, ...rawUserDto } = parsedData
+
+        if (Number(expectedCode) !== inputCode) {
+            throw new BadRequestException('Неверный код подтверждения')
+        }
+
+        const [, { uuid, email }] = await Promise.all([this.redis.delete(redisKey), this.userService.create(rawUserDto)])
+
+        this.logger.log(`Пользователь ${email} успешно зарегистрирован`)
+
+        const [accessToken, refreshToken] = await Promise.all([this.tokenService.generateAccessToken(uuid, email), this.tokenService.generateRefreshToken(uuid, email)])
+
+        return {
+            accessToken,
+            refreshToken
         }
     }
 
     async resendConfirmCode({ hash, action }: ResendConfirmCodeDto) {
-        let redisKey: string
-        let subject
-        switch (action) {
-            case 'signin':
-                redisKey = `signin-${hash}`
-                subject = `Код для подтверждения входа в аккаунт`
-                break
-            case 'signup':
-                redisKey = `signup-${hash}`
-                subject = `Код для подтверждения регистрации`
-                break
-            case 'change-password-no-auth':
-                redisKey = `changePasswordNoAuth-${hash}`
-                subject = 'Код подтверждения для смены пароля в аккаунте Gravitino Terminal'
-                break
-            case 'twoFactor':
-                redisKey = `twoFactor-${hash}`
-                subject = 'Код для изменения 2FA аккаунта Gravitino Terminal'
-                break
-            default:
-                throw new BadRequestException()
+        const actions = {
+            signin: { key: `signin-${hash}`, subject: 'Код для подтверждения входа в аккаунт' },
+            signup: { key: `signup-${hash}`, subject: 'Код для подтверждения регистрации' },
+            'change-password-no-auth': {
+                key: `changePasswordNoAuth-${hash}`,
+                subject: 'Код подтверждения для смены пароля в аккаунте Gravitino Terminal'
+            },
+            twoFactor: {
+                key: `twoFactor-${hash}`,
+                subject: 'Код для изменения 2FA аккаунта Gravitino Terminal'
+            }
         }
-        const data: string | number | null = await this.redis.get(redisKey)
-        if (!data || typeof data !== 'string') {
+
+        const actionMeta = actions[action]
+        if (!actionMeta) {
+            throw new BadRequestException('Неверное действие')
+        }
+
+        const cachedData = await this.redis.get(actionMeta.key)
+        if (!cachedData || typeof cachedData !== 'string') {
             throw new BadRequestException('Время жизни кода истекло')
         }
 
-        const userDataJson = JSON.parse(data)
+        const parsed = JSON.parse(cachedData)
+        const newCode = this.generateVerificationCode()
+        const updatedData = JSON.stringify({ ...parsed, code: newCode })
 
-        const newCode: number = this.generateVerificationCode()
+        await this.redis.set(actionMeta.key, updatedData, 300)
+        await this.smtpService.send(parsed.email, `Ваш код подтверждения: ${newCode}`, actionMeta.subject)
 
-        const newDataJson = { ...userDataJson, code: newCode }
-
-        const newData = JSON.stringify(newDataJson)
-        await this.redis.set(redisKey, newData, 300)
-
-        this.smtpService.send(userDataJson.email, `Ваш код подтверждения: ${newCode}`, subject)
-
-        return {
-            msg: 'Код отправляется',
-            hash
-        }
+        return { msg: 'Код отправляется', hash }
     }
 
-    async signIn(userDto: SignInUserDto, ip: string) {
-        let usedAttempts = await this.redis.get(`signin-attempts-${ip}`)
-        if (!usedAttempts || typeof usedAttempts != 'string') {
-            usedAttempts = 0
-        }
-        if (Number(usedAttempts) >= 5) {
-            throw new BadRequestException('Много попыток')
-        }
+    async signIn({ email, password }: SignInUserDto, ip: string) {
+        const attemptsKey = await this.checkSignInAttempts(ip)
 
-        const user = await this.userService.findOneByEmail(userDto.email, true)
+        const user = await this.userService.findOneByEmail(email, true)
 
-        if (!(await this.passwordService.comparePassword(userDto.password, user.hashedPassword))) {
-            await this.redis.incrementWithTTL(`signin-attempts-${ip}`, 1, 600)
-            throw new NotFoundException('Пользователь не найден')
+        const isValid = await this.passwordService.comparePassword(password, user.hashedPassword)
+        if (!isValid) {
+            await this.redis.incrementWithTTL(attemptsKey, 1, 600)
+            throw new NotFoundException('Неверный email или пароль')
         }
 
-        if (user.twoFactor === false) {
+        if (!user.twoFactor) {
             return {
                 accessToken: await this.tokenService.generateAccessToken(user.uuid, user.email),
                 refreshToken: await this.tokenService.generateRefreshToken(user.uuid, user.email),
@@ -149,55 +136,38 @@ export class AuthService {
             }
         }
 
-        const code: number = this.generateVerificationCode()
-        const hash: string = await this.generateHash()
+        const code = this.generateVerificationCode()
+        const hash = await this.generateHash()
+        const payload = JSON.stringify({ uuid: user.uuid, email: user.email, code })
 
-        const redisData = {
-            email: user.email,
-            uuid: user.uuid,
-            code
-        }
-        const userData: string = JSON.stringify(redisData)
+        await this.redis.set(`signin-${hash}`, payload, 300)
+        await this.smtpService.send(email, `Ваш код подтверждения: ${code}`, 'Код для подтверждения входа в аккаунт')
 
-        await this.redis.set(`signin-${hash}`, userData, 300)
-
-        this.smtpService.send(userDto.email, `Ваш код подтверждения: ${code}`, 'Код для подтверждения входа в аккаунт')
-
-        const data: SignUpResponseUserDto = {
-            msg: 'Код отправляется',
-            hash
-        }
-        return data
+        return { msg: 'Код отправляется', hash }
     }
 
-    async confirmSignIn(confirmUserDto: ConfirmSignUpUserDto, ip: string) {
-        let usedAttempts = await this.redis.get(`confirm-attempts-${ip}`)
-        if (!usedAttempts || typeof usedAttempts != 'string') {
-            usedAttempts = 0
-        }
-        if (Number(usedAttempts) >= 5) {
-            throw new BadRequestException('Много попыток')
-        }
+    async confirmSignIn({ hash, code: inputCode }: ConfirmSignUpUserDto, ip: string) {
+        await this.checkConfirmAttempts(ip)
 
-        const userDataString = await this.redis.get(`signin-${confirmUserDto.hash}`)
+        const redisKey = `signin-${hash}`
+        const cachedData = await this.redis.get(redisKey)
 
-        if (!userDataString || typeof userDataString !== 'string') {
-            throw new BadRequestException()
+        if (!cachedData || typeof cachedData !== 'string') {
+            throw new BadRequestException('Недействительный или просроченный хэш')
         }
 
-        const userDataJson = JSON.parse(userDataString)
-        const { code, ...userDto } = userDataJson
+        const { uuid, email, code: expectedCode } = JSON.parse(cachedData)
 
-        if (Number(code) !== confirmUserDto.code) {
+        if (Number(expectedCode) !== inputCode) {
             await this.redis.incrementWithTTL(`confirm-attempts-${ip}`, 1, 600)
-            throw new BadRequestException('Неверный код')
+            throw new BadRequestException('Неверный код подтверждения')
         }
 
-        await this.redis.delete(`signin-${confirmUserDto.hash}`)
+        await this.redis.delete(redisKey)
 
-        this.logger.log(`Пользователь ${userDto.email} выполнил вход`)
+        const user = await this.userService.findOneByUuid(uuid, false)
 
-        const user = await this.userService.findOneByUuid(userDto.uuid, false)
+        this.logger.log(`Пользователь ${email} выполнил вход`)
 
         return {
             accessToken: await this.tokenService.generateAccessToken(user.uuid, user.email),
@@ -207,63 +177,68 @@ export class AuthService {
     }
 
     async refresh(refreshToken: string) {
-        const payload = await this.tokenService.verifyRefreshToken(refreshToken)
-        const newAccessToken = await this.tokenService.generateAccessToken(payload.uuid, payload.email)
-        this.logger.log(`Пользователь ${payload.email} получил новый access-token`)
-        return { accessToken: newAccessToken }
+        const { uuid, email } = await this.tokenService.verifyRefreshToken(refreshToken)
+        const accessToken = await this.tokenService.generateAccessToken(uuid, email)
+
+        this.logger.log(`Пользователь ${email} получил новый access-token`)
+
+        return { accessToken }
     }
 
-    async changePassword(dto: ChangePasswordNoAuthDto) {
-        const code: number = Math.floor(100000 + Math.random() * 900000)
+    async changePassword({ email, password }: ChangePasswordNoAuthDto) {
+        const code = this.generateVerificationCode()
+        const hash = await this.generateHash()
 
-        const hash: string = await this.generateHash()
+        const user = await this.userService.findOneByEmail(email)
+        const hashedPassword = await this.passwordService.hashPassword(password)
 
-        const user = await this.userService.findOneByEmail(dto.email)
+        const data = JSON.stringify({
+            uuid: user.uuid,
+            email: user.email,
+            password_hash: hashedPassword,
+            code
+        })
 
-        const password_hash = await this.passwordService.hashPassword(dto.password)
+        await this.redis.set(`changePasswordNoAuth-${hash}`, data, 300)
+        await this.smtpService.send(email, `Ваш код подтверждения: ${code}`, 'Код подтверждения для смены пароля')
 
-        const userData: string = JSON.stringify({ uuid: user.uuid, email: user.email, password_hash, code })
-
-        await this.redis.set(`changePasswordNoAuth-${hash}`, userData, 300)
-
-        this.smtpService.send(user.email, `Ваш код подтверждения: ${code}`, `Код подтверждения для смены пароля`)
-
-        return {
-            msg: 'Код отправляется',
-            hash
-        }
+        return { msg: 'Код отправляется', hash }
     }
 
-    async confirmChangePassword(ip: string, { hash, code }: ConfirmChangePasswordDto) {
-        const userData: string | number = await this.redis.get(`changePasswordNoAuth-${hash}`)
-        if (!userData || typeof userData !== 'string') {
-            throw new BadRequestException()
-        }
-        const JsonUserData = JSON.parse(userData)
-        const uuid = JsonUserData.uuid
-
-        if (uuid != JsonUserData.uuid) {
-            throw new UnauthorizedException('Нет доступа')
-        }
-
+    async confirmChangePassword(ip: string, { hash, code: inputCode }: ConfirmChangePasswordDto) {
         await this.checkConfirmAttempts(ip)
 
-        if (Number(code) !== JsonUserData.code) {
+        const redisKey = `changePasswordNoAuth-${hash}`
+        const cachedData = await this.redis.get(redisKey)
+
+        if (!cachedData || typeof cachedData !== 'string') {
+            throw new BadRequestException('Недействительный или просроченный хэш')
+        }
+
+        const { uuid, password_hash, code: expectedCode } = JSON.parse(cachedData)
+
+        if (Number(expectedCode) !== inputCode) {
             await this.redis.incrementWithTTL(`confirm-attempts-${ip}`, 1, 600)
             throw new BadRequestException('Неверный код')
         }
 
-        return this.userRepository.updatePassword(uuid, JsonUserData.password_hash)
+        return this.userRepository.updatePassword(uuid, password_hash)
     }
 
     private async checkConfirmAttempts(ip: string) {
-        let usedAttempts = await this.redis.get(`confirm-attempts-${ip}`)
-        if (!usedAttempts || typeof usedAttempts != 'string') {
-            usedAttempts = 0
-        }
-        if (Number(usedAttempts) >= 5) {
+        const attempts = Number(await this.redis.get(`confirm-attempts-${ip}`)) || 0
+        if (attempts >= 5) {
             throw new BadRequestException('Много попыток')
         }
-        return true
+    }
+
+    private async checkSignInAttempts(ip: string) {
+        const attemptsKey = `signin-attempts-${ip}`
+        const attempts = Number(await this.redis.get(attemptsKey)) || 0
+
+        if (attempts >= 5) {
+            throw new BadRequestException('Слишком много попыток входа')
+        }
+        return attemptsKey
     }
 }

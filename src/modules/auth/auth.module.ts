@@ -3,17 +3,15 @@ import { AuthService } from './auth.service'
 import { AuthController } from './auth.controller'
 import { UserModule } from '../user/user.module'
 import { TokenModule } from '../token/token.module'
-import { PasswordService } from '../password/password.service'
-import { CryptService } from 'src/modules/crypt/crypt.service'
-import { SmtpService } from 'src/modules/smtp/smtp.service'
-import { RedisService } from 'src/modules/redis/redis.service'
-import { UserRepository } from 'src/modules/user/user.repository'
-import { PrismaService } from '../prisma/prisma.service'
+import { RedisModule } from '../redis/redis.module'
+import { CryptModule } from '../crypt/crypt.module'
+import { PasswordModule } from '../password/password.module'
+import { SmtpModule } from '../smtp/smtp.module'
 
 @Module({
+    imports: [forwardRef(() => UserModule), TokenModule, PasswordModule, CryptModule, RedisModule, SmtpModule],
     controllers: [AuthController],
-    providers: [AuthService, PasswordService, PrismaService, CryptService, SmtpService, RedisService, UserRepository],
-    imports: [forwardRef(() => UserModule), TokenModule],
-    exports: [AuthService, TokenModule]
+    providers: [AuthService],
+    exports: [AuthService]
 })
 export class AuthModule {}
