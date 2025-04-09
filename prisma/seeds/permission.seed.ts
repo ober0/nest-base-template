@@ -7,11 +7,13 @@ export async function seedPermission(prisma: PrismaClient) {
     for (const role of permissions) {
         const description = PermissionDescriptions[role] ?? role
 
-        await prisma.permission.create({
-            data: {
+        await prisma.permission.upsert({
+            where: { name: role },
+            create: {
                 name: role,
                 description
-            }
+            },
+            update: {}
         })
     }
 }
