@@ -13,9 +13,7 @@ export class RoleService {
     ) {}
 
     async create({ permissions, ...roleDto }: RoleCreateDto) {
-        await this.ensureRoleNameUnique(roleDto.name)
-        this.ensurePermissionsAreUnique(permissions)
-        await this.ensurePermissionsExist(permissions)
+        await Promise.all([this.ensureRoleNameUnique(roleDto.name), this.ensurePermissionsAreUnique(permissions), this.ensurePermissionsExist(permissions)])
 
         return this.prisma.$transaction(async (transactionClient) => {
             const newRole = await this.roleRepository.create(roleDto, transactionClient)
@@ -31,9 +29,7 @@ export class RoleService {
     }
 
     async update(roleUuid: string, { permissions, ...roleDto }: RoleUpdateDto) {
-        await this.ensureRoleExists(roleUuid)
-        this.ensurePermissionsAreUnique(permissions)
-        await this.ensurePermissionsExist(permissions)
+        await Promise.all([this.ensureRoleExists(roleUuid), this.ensurePermissionsAreUnique(permissions), this.ensurePermissionsExist(permissions)])
 
         return this.prisma.$transaction(async (transactionClient) => {
             const updatedRole = await this.roleRepository.update(roleUuid, roleDto, transactionClient)
@@ -119,7 +115,7 @@ export class RoleService {
         }
     }
 
-    private ensurePermissionsAreUnique(permissions: string[]) {
+    private async ensurePermissionsAreUnique(permissions: string[]) {
         if (new Set(permissions).size !== permissions.length) {
             throw new BadRequestException('Дубликат')
         }
