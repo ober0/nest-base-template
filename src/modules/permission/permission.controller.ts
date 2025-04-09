@@ -6,28 +6,28 @@ import { ActiveGuard } from '../auth/guards/active.guard'
 import { PermissionGuard } from '../role-permission/guards/permission.guard'
 import { HasPermissions } from '../role-permission/decorators/permissions.decorator'
 import { PermissionEnum } from 'src/common/constants/permission.enum'
-import { PermissionResponseDto } from './res'
+import { PermissionResponseDto } from './dto/index.dto'
+import { PermissionSummary } from '../../config/summary/permission.summary'
 
 @ApiTags('Permission')
 @ApiSecurity('bearer')
 @Controller('permission')
+@UseGuards(JwtAuthGuard, ActiveGuard, PermissionGuard)
 export class PermissionController {
     constructor(private readonly permissionService: PermissionService) {}
 
     @Get()
-    @ApiOkResponse({ type: [PermissionResponseDto] })
-    @UseGuards(JwtAuthGuard, ActiveGuard, PermissionGuard)
+    @ApiOkResponse({ type: PermissionResponseDto })
     @HasPermissions(PermissionEnum.PlanGetAll)
-    @ApiOperation({ summary: 'Получение всех прав' })
+    @ApiOperation({ summary: PermissionSummary.GET_ALL })
     async findAll() {
         return this.permissionService.findAll()
     }
 
     @Get(':uuid')
     @ApiOkResponse({ type: PermissionResponseDto })
-    @UseGuards(JwtAuthGuard, ActiveGuard, PermissionGuard)
     @HasPermissions(PermissionEnum.PlanGet)
-    @ApiOperation({ summary: 'Получение одного права' })
+    @ApiOperation({ summary: PermissionSummary.GET_ONE })
     async findOne(@Param('uuid') uuid: string) {
         return this.permissionService.findOne(uuid)
     }
