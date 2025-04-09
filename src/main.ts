@@ -15,7 +15,6 @@ async function bootstrap() {
         credentials: true
     })
 
-    // Настройка Swagger
     const config = new DocumentBuilder()
         .setTitle('API Documentation')
         .setDescription('Документация для API')
@@ -31,7 +30,7 @@ async function bootstrap() {
         .build()
 
     const document = SwaggerModule.createDocument(app, config)
-    SwaggerModule.setup('api/docs', app, document)
+    SwaggerModule.setup('api', app, document)
 
     await app.listen(process.env.PORT ?? 3000)
 }
