@@ -1,32 +1,47 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, InternalServerErrorException } from '@nestjs/common'
 import * as crypto from 'crypto'
 
 @Injectable()
 export class CryptService {
-    private algorithm = 'aes-256-cbc'
-    private secretKey: Buffer
-    private ivLength = 16
+    private readonly algorithm = 'aes-256-cbc'
+    private readonly ivLength = 16
+    private readonly secretKey: Buffer
 
     constructor() {
         const key = process.env.ENCRYPTION_KEY
-        this.secretKey = Buffer.from(key, 'base64')
-
-        if (this.secretKey.length !== 32) {
-            throw new Error('Invalid ENCRYPTION_KEY: Key must be 32 bytes long after decoding.')
+        if (!key) {
+            throw new InternalServerErrorException('ENCRYPTION_KEY не задан в .env')
         }
+
+        const keyBuffer = Buffer.from(key, 'base64')
+
+        if (keyBuffer.length !== 32) {
+            throw new InternalServerErrorException('Неверный ENCRYPTION_KEY: ключ должен быть 32 байта после base64-декодирования')
+        }
+
+        this.secretKey = keyBuffer
     }
 
-    async encrypt(text: string): Promise<string> {
+    encrypt(text: string): string {
         const iv = crypto.randomBytes(this.ivLength)
         const cipher = crypto.createCipheriv(this.algorithm, this.secretKey, iv)
-        const encrypted = Buffer.concat([cipher.update(text), cipher.final()])
+        const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
         return `${iv.toString('hex')}:${encrypted.toString('hex')}`
     }
 
-    async decrypt(encryptedText: string): Promise<string> {
-        const [iv, encrypted] = encryptedText.split(':')
-        const decipher = crypto.createDecipheriv(this.algorithm, this.secretKey, Buffer.from(iv, 'hex'))
-        const decrypted = Buffer.concat([decipher.update(Buffer.from(encrypted, 'hex')), decipher.final()])
-        return decrypted.toString()
+    decrypt(encryptedText: string): string {
+        const [ivHex, encryptedHex] = encryptedText.split(':')
+
+        if (!ivHex || !encryptedHex) {
+            throw new Error('Неверный формат зашифрованной строки')
+        }
+
+        const iv = Buffer.from(ivHex, 'hex')
+        const encrypted = Buffer.from(encryptedHex, 'hex')
+
+        const decipher = crypto.createDecipheriv(this.algorithm, this.secretKey, iv)
+        const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()])
+
+        return decrypted.toString('utf8')
     }
 }
