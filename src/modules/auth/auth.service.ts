@@ -32,7 +32,7 @@ export class AuthService {
     }
 
     private async ensureUserByEmail(email: string) {
-        const user = this.userRepository.findOneByEmail(email)
+        const user = await this.userRepository.findOneByEmail(email)
         if (user) {
             throw new ConflictException('Пользователь с таким email уже существует')
         }

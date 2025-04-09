@@ -1,40 +1,43 @@
 import { Injectable, Logger } from '@nestjs/common'
-import * as nodemailer from 'nodemailer'
+import axios from 'axios'
 import * as process from 'node:process'
 
 @Injectable()
 export class SmtpService {
-    private transporter: nodemailer.Transporter
-    private readonly logger: Logger = new Logger('SmtpService')
-    constructor() {
-        this.createTransporter()
-    }
+    private readonly logger = new Logger('SmtpService')
+    private readonly apiUrl = 'https://api.mailersend.com/v1/email'
+    private readonly apiKey = process.env.MAILERSEND_API_KEY
+    private readonly fromEmail = process.env.MAILERSEND_FROM_EMAIL
+    private readonly fromName = process.env.MAILERSEND_FROM_NAME || 'MailerSend'
 
-    private createTransporter() {
-        this.transporter = nodemailer.createTransport({
-            service: process.env.SMTP_SERVICE,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            }
-        })
-    }
-
-    async send(email: string, text: string, subject: string) {
-        const mailOptions = {
-            from: process.env.SMTP_USER,
-            to: email,
+    async send(to: string, text: string, subject: string) {
+        const payload = {
+            from: {
+                email: this.fromEmail,
+                name: this.fromName
+            },
+            to: [
+                {
+                    email: to,
+                    name: to
+                }
+            ],
             subject,
-            text
+            text,
+            html: `<p>${text}</p>`
         }
 
         try {
-            await this.transporter.sendMail(mailOptions)
-            return {
-                success: true
-            }
+            await axios.post(this.apiUrl, payload, {
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+
+            return { success: true }
         } catch (error) {
-            this.logger.error(error)
+            this.logger.error('MailerSend error:', error?.response?.data || error.message)
             return null
         }
     }
