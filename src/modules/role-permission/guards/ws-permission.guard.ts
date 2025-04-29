@@ -22,7 +22,7 @@ export class WsPermissionsGuard implements CanActivate {
             await this._handleError(client)
             return false
         }
-        const hasAllPermissions = await this.hasAllPermissions(requiredPermissions, user.uuid)
+        const hasAllPermissions = await this.hasAllPermissions(requiredPermissions, user.id)
         if (!hasAllPermissions) {
             await this._handleError(client)
             return false
@@ -30,8 +30,8 @@ export class WsPermissionsGuard implements CanActivate {
         return true
     }
 
-    private async hasAllPermissions(requiredPermissions: PermissionEnum[], userUuid: string): Promise<boolean> {
-        const permissionsCheckResults = await Promise.all(requiredPermissions.map((permission) => this.rolesPermissionsService.checkPermission(permission, userUuid)))
+    private async hasAllPermissions(requiredPermissions: PermissionEnum[], userId: string): Promise<boolean> {
+        const permissionsCheckResults = await Promise.all(requiredPermissions.map((permission) => this.rolesPermissionsService.checkPermission(permission, userId)))
         return permissionsCheckResults.every((result) => result)
     }
 

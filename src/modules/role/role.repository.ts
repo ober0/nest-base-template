@@ -10,8 +10,8 @@ export class RoleRepository {
         return transactionClient.role.create({ data: roleDto })
     }
 
-    findById(uuid: string, transactionClient: Prisma.TransactionClient = this.prisma) {
-        return transactionClient.role.findUnique({ where: { uuid } })
+    findById(id: string, transactionClient: Prisma.TransactionClient = this.prisma) {
+        return transactionClient.role.findUnique({ where: { id } })
     }
 
     findByName(name: string, transactionClient: Prisma.TransactionClient = this.prisma) {
@@ -22,26 +22,26 @@ export class RoleRepository {
         return transactionClient.role.findMany()
     }
 
-    update(uuid: string, roleDto: Prisma.RoleUpdateInput, transactionClient: Prisma.TransactionClient = this.prisma) {
+    update(id: string, roleDto: Prisma.RoleUpdateInput, transactionClient: Prisma.TransactionClient = this.prisma) {
         return transactionClient.role.update({
-            where: { uuid },
+            where: { id },
             data: roleDto
         })
     }
 
-    delete(uuid: string, transactionClient: Prisma.TransactionClient = this.prisma) {
-        return transactionClient.role.delete({ where: { uuid } })
+    delete(id: string, transactionClient: Prisma.TransactionClient = this.prisma) {
+        return transactionClient.role.delete({ where: { id } })
     }
 
-    createRolePermissions(permissions: { roleUuid: string; permissionUuid: string }[], transactionClient: Prisma.TransactionClient = this.prisma) {
+    createRolePermissions(permissions: { roleId: string; permissionId: string }[], transactionClient: Prisma.TransactionClient = this.prisma) {
         return transactionClient.rolePermission.createMany({
             data: permissions
         })
     }
 
-    deleteRolePermissions(roleUuid: string, transactionClient: Prisma.TransactionClient = this.prisma) {
+    deleteRolePermissions(roleId: string, transactionClient: Prisma.TransactionClient = this.prisma) {
         return transactionClient.rolePermission.deleteMany({
-            where: { roleUuid }
+            where: { roleId }
         })
     }
 
@@ -49,7 +49,7 @@ export class RoleRepository {
         return !!(await this.findByName(name))
     }
 
-    async existsByUuid(uuid: string) {
-        return !!(await this.findById(uuid))
+    async existsById(id: string) {
+        return !!(await this.findById(id))
     }
 }

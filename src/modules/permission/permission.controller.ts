@@ -24,11 +24,11 @@ export class PermissionController {
         return this.permissionService.findAll()
     }
 
-    @Get(':uuid')
+    @Get(':id')
     @ApiOkResponse({ type: PermissionResponseDto })
     @HasPermissions(PermissionEnum.PlanGet)
     @ApiOperation({ summary: PermissionSummary.GET_ONE })
-    async findOne(@Param('uuid') uuid: string) {
-        return this.permissionService.findOne(uuid)
+    async findOne(@Param('id') id: string) {
+        return this.permissionService.findOne(id)
     }
 }

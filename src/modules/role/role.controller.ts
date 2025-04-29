@@ -25,12 +25,12 @@ export class RoleController {
         return this.roleService.create(roleDto)
     }
 
-    @Get(':uuid')
+    @Get(':id')
     @ApiCreatedResponse({ type: RoleResponseDto })
     @HasPermissions(PermissionEnum.RoleGet)
     @ApiOperation({ summary: RoleSummary.GET_ONE_ROLE_SUMMARY })
-    async findOne(@Param('uuid') uuid: string) {
-        return this.roleService.findOne(uuid)
+    async findOne(@Param('id') id: string) {
+        return this.roleService.findOne(id)
     }
 
     @Get()
@@ -41,18 +41,18 @@ export class RoleController {
         return this.roleService.findAll()
     }
 
-    @Patch(':uuid')
+    @Patch(':id')
     @ApiCreatedResponse({ type: RoleResponseDto })
     @HasPermissions(PermissionEnum.RoleUpdate)
     @ApiOperation({ summary: RoleSummary.UPDATE_ROLE_SUMMARY })
-    async update(@Param('uuid') uuid: string, @Body() roleDto: RoleUpdateDto) {
-        return this.roleService.update(uuid, roleDto)
+    async update(@Param('id') id: string, @Body() roleDto: RoleUpdateDto) {
+        return this.roleService.update(id, roleDto)
     }
 
-    @Delete(':uuid')
+    @Delete(':id')
     @HasPermissions(PermissionEnum.RoleDelete)
     @ApiOperation({ summary: RoleSummary.DELETE_ROLE_SUMMARY })
-    async delete(@Param('uuid') id: string) {
+    async delete(@Param('id') id: string) {
         return this.roleService.delete(id)
     }
 }

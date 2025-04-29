@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsArray, IsBoolean, IsEmail, IsNumber, IsOptional, IsString } from 'class-validator'
+import { IsArray, IsBoolean, IsEmail, IsNumber, IsOptional, IsPhoneNumber, IsString } from 'class-validator'
+import { RolesEnum } from '../../role/enum/roles.enum'
 
 export class HashDto {
     @ApiProperty()
@@ -27,11 +28,11 @@ export class SignUpUserDto {
 
     @ApiProperty()
     @IsString()
-    username: string
+    password: string
 
     @ApiProperty()
-    @IsString()
-    password: string
+    @IsPhoneNumber('RU')
+    phoneNumber: string
 }
 
 export class ConfirmSignUpUserDto extends HashDto {
@@ -59,9 +60,12 @@ export class SignInUserDto {
 
 export class JwtPayloadDto {
     email: string
-    uuid: string
+    id: string
     iat: number
     exp: number
+    role: {
+        name: RolesEnum
+    }
 }
 
 export class RefreshTokenDto {
@@ -80,21 +84,6 @@ export class SelfUserUpdateDto {
     @IsString()
     @IsOptional()
     lastName?: string
-
-    @ApiProperty({ required: false })
-    @IsString()
-    @IsOptional()
-    username?: string
-
-    @ApiProperty({ required: false })
-    @IsString()
-    @IsOptional()
-    twitterLink: string
-
-    @ApiProperty({ required: false })
-    @IsString()
-    @IsOptional()
-    youtubeLink: string
 }
 
 export class confirmDto {
@@ -146,7 +135,7 @@ export class ConfirmChangePasswordDto {
 export class UserOrganizationDto {
     @ApiProperty()
     @IsArray()
-    uuids: string[]
+    ids: string[]
 }
 
 export class TwoFactorAuthDto {

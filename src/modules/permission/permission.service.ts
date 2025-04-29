@@ -17,21 +17,21 @@ export class PermissionService {
         return permissions
     }
 
-    async findOne(uuid: string) {
-        const permission = await this.permissionRepository.findOne(uuid)
+    async findOne(id: string) {
+        const permission = await this.permissionRepository.findOne(id)
         if (!permission) {
-            this.logger.error(`Право ${uuid} не найдено`)
-            throw new NotFoundException(`Право ${uuid} не найдено`)
+            this.logger.error(`Право ${id} не найдено`)
+            throw new NotFoundException(`Право ${id} не найдено`)
         }
         this.logger.log(`Право ${permission.name} найдено`)
         return permission
     }
 
-    async exists(uuid: string) {
-        return this.permissionRepository.exists(uuid)
+    async exists(id: string) {
+        return this.permissionRepository.exists(id)
     }
 
-    async existsMany(uuids: string[]): Promise<boolean> {
-        return this.permissionRepository.existsMany(uuids)
+    async existsMany(ids: string[]): Promise<boolean> {
+        return this.permissionRepository.existsMany(ids)
     }
 }

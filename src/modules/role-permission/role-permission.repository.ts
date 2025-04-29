@@ -5,9 +5,9 @@ import { PrismaService } from '../prisma/prisma.service'
 export class RolePermissionRepository {
     constructor(private readonly prisma: PrismaService) {}
 
-    async findPermissionsByRoleUuid(roleUuid: string) {
+    async findPermissionsByRoleId(roleId: string) {
         return this.prisma.rolePermission.findMany({
-            where: { roleUuid },
+            where: { roleId },
             select: { permission: true }
         })
     }

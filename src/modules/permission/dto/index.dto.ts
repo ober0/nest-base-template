@@ -3,7 +3,7 @@ import { BaseResponse } from 'src/common/base/response'
 
 export class PermissionResponseDto extends BaseResponse {
     @ApiProperty()
-    uuid: string
+    id: string
 
     @ApiProperty()
     name: string

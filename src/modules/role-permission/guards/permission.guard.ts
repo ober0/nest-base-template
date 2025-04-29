@@ -16,15 +16,15 @@ export class PermissionGuard implements CanActivate {
             return true
         }
         const { user } = context.switchToHttp().getRequest()
-        const hasAllPermissions = await this._hasAllPermissions(requiredPermissions, user.uuid)
+        const hasAllPermissions = await this._hasAllPermissions(requiredPermissions, user.id)
         if (!hasAllPermissions) {
             throw new ForbiddenException('Нет доступа')
         }
         return true
     }
 
-    private async _hasAllPermissions(requiredPermissions: PermissionEnum[], userUuid: string): Promise<boolean> {
-        const permissionsCheckResults = await Promise.all(requiredPermissions.map((permission) => this.rolesPermissionsService.checkPermission(permission, userUuid)))
+    private async _hasAllPermissions(requiredPermissions: PermissionEnum[], userId: string): Promise<boolean> {
+        const permissionsCheckResults = await Promise.all(requiredPermissions.map((permission) => this.rolesPermissionsService.checkPermission(permission, userId)))
         return permissionsCheckResults.every((result) => result)
     }
 }

@@ -8,5 +8,5 @@ export class RolePermissionCreateDto {
 
     @ApiProperty()
     @IsUUID()
-    permissionUuid: string
+    permissionId: string
 }

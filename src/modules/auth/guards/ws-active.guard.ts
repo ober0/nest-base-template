@@ -9,11 +9,11 @@ export class WsActiveGuard implements CanActivate {
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const client: Socket = context.switchToWs().getClient<Socket>()
         const user = client.data.user
-        if (!user || !user.uuid) {
+        if (!user || !user.id) {
             this._handleError(client, 'User not found')
             return false
         }
-        const canActivate = await this.userService.findOneByUuid(user.uuid, false)
+        const canActivate = await this.userService.findOneById(user.id, false)
         if (canActivate.isActive && !canActivate.isForbidden) {
             return true
         } else if (!canActivate.isActive) {

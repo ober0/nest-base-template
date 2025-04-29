@@ -1,6 +1,5 @@
-import { Injectable, NotFoundException, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common'
 import { createHash, randomBytes } from 'crypto'
-import * as fs from 'fs'
 
 import { RedisService } from 'src/modules/redis/redis.service'
 import { SmtpService } from 'src/modules/smtp/smtp.service'
@@ -9,10 +8,9 @@ import { PasswordService } from '../password/password.service'
 import { UserRepository } from './user.repository'
 
 import { ConfirmChangePasswordDto, SelfUserUpdateDto, SignUpUserDto, TwoFactorAuthDto } from '../auth/dto'
-
-const ATTEMPT_LIMIT = 5
-const ATTEMPT_TTL = 600
-const TWO_FACTOR_TTL = 300
+import { UserSearchDto } from './dto/search.dto'
+import { ConfigService } from '@nestjs/config'
+import { RolesEnum } from '../role/enum/roles.enum'
 
 @Injectable()
 export class UserService {
@@ -21,22 +19,24 @@ export class UserService {
         private readonly userRepository: UserRepository,
         private readonly passwordService: PasswordService,
         private readonly redis: RedisService,
-        private readonly smtpService: SmtpService
+        private readonly smtpService: SmtpService,
+        private readonly configService: ConfigService
     ) {}
 
-    async create(userDto: SignUpUserDto) {
-        if (await this.userRepository.existsByEmail(userDto.email)) {
-            throw new ConflictException('Пользователь с таким email существует')
-        }
+    private readonly ATTEMPT_LIMIT: number = this.configService.get<number>('ATTEMPT_LIMIT')
+    private readonly ATTEMPT_TTL: number = this.configService.get<number>('ATTEMPT_TTL')
+    private readonly TWO_FACTOR_TTL: number = this.configService.get<number>('TWO_FACTOR_TTL')
 
-        const roleUuid = (await this.roleService.findOneByName('user')).uuid
-        const hashedPassword = await this.passwordService.hashPassword(userDto.password)
-        const { password, ...rest } = userDto
+    async create(dto: SignUpUserDto) {
+        const { password, ...data } = dto
+        const hashedPassword = await this.passwordService.hashPassword(password)
+
+        const role = await this.roleService.findOneByName(RolesEnum.User)
 
         return this.userRepository.create({
-            ...rest,
+            ...data,
             hashedPassword,
-            role: { connect: { uuid: roleUuid } }
+            roleId: role.id
         })
     }
 
@@ -46,39 +46,28 @@ export class UserService {
             throw new NotFoundException('Пользователь не найден')
         }
         if (!withPassword) {
-            delete user.hashedPassword
+            delete user.password
         }
         return user
     }
 
-    async findOneByUuid(uuid: string, withPassword = true) {
-        const user = await this.userRepository.findOneByUuid(uuid)
+    async findOneById(id: string, withPassword = true) {
+        const user = await this.userRepository.findOneById(id)
         if (!user) {
             throw new NotFoundException('Пользователь не найден')
         }
 
-        const logoPath = `./media/users/avatars/${user.avatar}`
-        let avatar: string | null = null
-
-        try {
-            if (fs.existsSync(logoPath)) {
-                const base64 = fs.readFileSync(logoPath, { encoding: 'base64' })
-                avatar = `data:image/png;base64,${base64}`
-            }
-        } catch {
-            avatar = null
-        }
-
-        const { hashedPassword, roleUuid, ...userWithoutSensitiveInfo } = user
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { password, roleId, ...userWithoutSensitiveInfo } = user
         if (!withPassword) {
-            return { ...userWithoutSensitiveInfo, avatar }
+            return userWithoutSensitiveInfo
         }
 
-        return { ...userWithoutSensitiveInfo, hashedPassword, avatar }
+        return { ...userWithoutSensitiveInfo, password }
     }
 
-    async update(uuid: string, userUpdateDto: SelfUserUpdateDto) {
-        return this.userRepository.update(uuid, userUpdateDto)
+    async update(id: string, userUpdateDto: SelfUserUpdateDto) {
+        return this.userRepository.update(id, userUpdateDto)
     }
 
     private async generateHash(length = 16): Promise<string> {
@@ -94,25 +83,25 @@ export class UserService {
     private async checkConfirmAttempts(ip: string) {
         const usedAttempts = await this.redis.get(`confirm-attempts-${ip}`)
         const attempts = Number(usedAttempts)
-        if (Number.isNaN(attempts) || attempts >= ATTEMPT_LIMIT) {
+        if (Number.isNaN(attempts) || attempts >= this.ATTEMPT_LIMIT) {
             throw new BadRequestException('Много попыток')
         }
         return true
     }
 
-    async twoFactorAuth(uuid: string, twoFactorAuthDto: TwoFactorAuthDto) {
+    async twoFactorAuth(id: string, twoFactorAuthDto: TwoFactorAuthDto) {
         const code = this.generate6DigitCode()
         const hash = await this.generateHash()
-        const user = await this.findOneByUuid(uuid)
+        const user = await this.findOneById(id)
 
         const userData = JSON.stringify({
-            uuid,
+            id,
             on: twoFactorAuthDto.on,
             code,
             email: user.email
         })
 
-        await this.redis.set(`twoFactor-${hash}`, userData, TWO_FACTOR_TTL)
+        await this.redis.set(`twoFactor-${hash}`, userData, this.TWO_FACTOR_TTL)
 
         this.smtpService.send(user.email, `Ваш код подтверждения: ${code}`, `Код подтверждения ${twoFactorAuthDto.on ? 'включения' : 'отключения'} 2FA`)
 
@@ -122,7 +111,7 @@ export class UserService {
         }
     }
 
-    async confirmTwoFactorAuth(ip: string, uuid: string, { hash, code }: ConfirmChangePasswordDto) {
+    async confirmTwoFactorAuth(ip: string, id: string, { hash, code }: ConfirmChangePasswordDto) {
         const userData = await this.redis.get(`twoFactor-${hash}`)
         if (!userData || typeof userData !== 'string') {
             throw new NotFoundException()
@@ -135,17 +124,26 @@ export class UserService {
             throw new BadRequestException('Данные повреждены')
         }
 
-        if (uuid !== JsonUserData.uuid) {
+        if (id !== JsonUserData.id) {
             throw new UnauthorizedException('Нет доступа')
         }
 
         await this.checkConfirmAttempts(ip)
 
         if (Number(code) !== JsonUserData.code) {
-            await this.redis.incrementWithTTL(`confirm-attempts-${ip}`, 1, ATTEMPT_TTL)
+            await this.redis.incrementWithTTL(`confirm-attempts-${ip}`, 1, this.ATTEMPT_TTL)
             throw new BadRequestException('Неверный код')
         }
 
-        return this.userRepository.updateTwoFactor(uuid, { on: JsonUserData.on })
+        return this.userRepository.updateTwoFactor(id, { on: JsonUserData.on })
+    }
+
+    async search(dto: UserSearchDto) {
+        const [data, count] = await Promise.all([this.userRepository.search(dto), this.userRepository.count(dto)])
+
+        return {
+            data,
+            count
+        }
     }
 }

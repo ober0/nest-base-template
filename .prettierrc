@@ -4,5 +4,6 @@
     "tabWidth": 4,
     "semi": false,
     "printWidth": 200,
-    "bracketSameLine": false
+    "bracketSameLine": false,
+    "endOfLine": "auto"
 }

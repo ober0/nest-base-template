@@ -18,9 +18,9 @@ export class RoleService {
         return this.prisma.$transaction(async (transactionClient) => {
             const newRole = await this.roleRepository.create(roleDto, transactionClient)
             await this.roleRepository.createRolePermissions(
-                permissions.map((permissionUuid) => ({
-                    roleUuid: newRole.uuid,
-                    permissionUuid
+                permissions.map((permissionId) => ({
+                    roleId: newRole.id,
+                    permissionId
                 })),
                 transactionClient
             )
@@ -28,16 +28,16 @@ export class RoleService {
         })
     }
 
-    async update(roleUuid: string, { permissions, ...roleDto }: RoleUpdateDto) {
-        await Promise.all([this.ensureRoleExists(roleUuid), this.ensurePermissionsAreUnique(permissions), this.ensurePermissionsExist(permissions)])
+    async update(roleId: string, { permissions, ...roleDto }: RoleUpdateDto) {
+        await Promise.all([this.ensureRoleExists(roleId), this.ensurePermissionsAreUnique(permissions), this.ensurePermissionsExist(permissions)])
 
         return this.prisma.$transaction(async (transactionClient) => {
-            const updatedRole = await this.roleRepository.update(roleUuid, roleDto, transactionClient)
-            await this.roleRepository.deleteRolePermissions(roleUuid, transactionClient)
+            const updatedRole = await this.roleRepository.update(roleId, roleDto, transactionClient)
+            await this.roleRepository.deleteRolePermissions(roleId, transactionClient)
             await this.roleRepository.createRolePermissions(
-                permissions.map((permissionUuid) => ({
-                    roleUuid,
-                    permissionUuid
+                permissions.map((permissionId) => ({
+                    roleId,
+                    permissionId
                 })),
                 transactionClient
             )
@@ -45,17 +45,17 @@ export class RoleService {
         })
     }
 
-    async findOne(uuid: string) {
+    async findOne(id: string) {
         const roleWithPermissions = await this.prisma.role.findUnique({
-            where: { uuid },
+            where: { id },
             select: {
-                uuid: true,
+                id: true,
                 name: true,
                 rolePermissions: {
                     select: {
                         permission: {
                             select: {
-                                uuid: true,
+                                id: true,
                                 name: true,
                                 description: true
                             }
@@ -77,13 +77,13 @@ export class RoleService {
     async findAll() {
         const roles = await this.prisma.role.findMany({
             select: {
-                uuid: true,
+                id: true,
                 name: true,
                 rolePermissions: {
                     select: {
                         permission: {
                             select: {
-                                uuid: true,
+                                id: true,
                                 name: true,
                                 description: true
                             }
@@ -98,9 +98,9 @@ export class RoleService {
         return roles
     }
 
-    async delete(uuid: string) {
-        await this.ensureRoleExists(uuid)
-        return this.roleRepository.delete(uuid)
+    async delete(id: string) {
+        await this.ensureRoleExists(id)
+        return this.roleRepository.delete(id)
     }
 
     private async ensureRoleNameUnique(name: string) {
@@ -109,8 +109,8 @@ export class RoleService {
         }
     }
 
-    private async ensureRoleExists(uuid: string) {
-        if (!(await this.roleRepository.existsByUuid(uuid))) {
+    private async ensureRoleExists(id: string) {
+        if (!(await this.roleRepository.existsById(id))) {
             throw new NotFoundException('Роль не найдена')
         }
     }

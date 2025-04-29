@@ -14,7 +14,7 @@ import {
 } from './dto'
 import { AccessRefreshTokenResponseDto, AccessTokenResponseDto, LoginResponseDto } from './res'
 import { Request } from 'express'
-import { AuthSummary } from '../../config/summary/auth.summary'
+import { AuthSummary } from '../../common/summary/auth.summary'
 
 @ApiTags('Auth')
 @Controller('auth')

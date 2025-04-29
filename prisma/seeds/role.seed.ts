@@ -14,8 +14,8 @@ async function createAdmin(prisma: PrismaClient, role: string = 'admin') {
         const createdRole = await tx.role.create({ data: { name: role } })
         const permissions = await tx.permission.findMany()
         const rolePermissions = permissions.map((permission) => ({
-            roleUuid: createdRole.uuid,
-            permissionUuid: permission.uuid
+            roleId: createdRole.id,
+            permissionId: permission.id
         }))
         await tx.rolePermission.createMany({ data: rolePermissions })
     })
@@ -28,7 +28,7 @@ async function createUser(prisma: PrismaClient) {
     await prisma.$transaction(async (tx) => {
         const createdRole = await tx.role.create({ data: { name: 'user' } })
 
-        const userPermissions: PermissionEnum[] = [] // можешь добавить нужные права
+        const userPermissions: PermissionEnum[] = []
 
         const permissions = await tx.permission.findMany({
             where: {
@@ -37,8 +37,8 @@ async function createUser(prisma: PrismaClient) {
         })
 
         const rolePermissions = permissions.map((permission) => ({
-            roleUuid: createdRole.uuid,
-            permissionUuid: permission.uuid
+            roleId: createdRole.id,
+            permissionId: permission.id
         }))
         await tx.rolePermission.createMany({ data: rolePermissions })
     })

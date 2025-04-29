@@ -8,7 +8,7 @@ export class ActiveGuard implements CanActivate {
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const { user } = context.switchToHttp().getRequest()
 
-        const canActivate = await this.userService.findOneByUuid(user.uuid)
+        const canActivate = await this.userService.findOneById(user.id)
 
         if (canActivate.isActive && !canActivate.isForbidden) {
             return true

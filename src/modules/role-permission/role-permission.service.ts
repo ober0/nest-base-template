@@ -9,15 +9,15 @@ export class RolePermissionService {
         private readonly userService: UserService
     ) {}
 
-    async checkPermission(permission: string, userUuid: string) {
-        const userRoleUuid = await this.getUserRoleUuid(userUuid)
-        const rolePermissions = await this.rolePermissionRepository.findPermissionsByRoleUuid(userRoleUuid)
+    async checkPermission(permission: string, userId: string) {
+        const userRoleId = await this.getUserRoleId(userId)
+        const rolePermissions = await this.rolePermissionRepository.findPermissionsByRoleId(userRoleId)
 
         return rolePermissions.some((rolePermission) => rolePermission.permission.name === permission)
     }
 
-    private async getUserRoleUuid(userUuid: string) {
-        const user = await this.userService.findOneByUuid(userUuid)
-        return user.role.uuid
+    private async getUserRoleId(userId: string) {
+        const user = await this.userService.findOneById(userId)
+        return user.role.id
     }
 }

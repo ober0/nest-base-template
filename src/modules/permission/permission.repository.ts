@@ -9,22 +9,22 @@ export class PermissionRepository {
         return this.prisma.permission.findMany()
     }
 
-    async findOne(uuid: string) {
-        return this.prisma.permission.findUnique({ where: { uuid } })
+    async findOne(id: string) {
+        return this.prisma.permission.findUnique({ where: { id } })
     }
 
-    async exists(uuid: string): Promise<boolean> {
+    async exists(id: string): Promise<boolean> {
         const result = await this.prisma.$queryRaw<{ exists: boolean }[]>`
             SELECT EXISTS(
 				SELECT 1 
 				FROM "Permission" 
-				WHERE "uuid" = ${uuid})
+				WHERE "id" = ${id})
         `
         return result[0]?.exists || false
     }
 
-    async existsMany(uuids: string[]): Promise<boolean> {
-        const permissionExistsResults = await Promise.all(uuids.map((uuid) => this.exists(uuid)))
+    async existsMany(ids: string[]): Promise<boolean> {
+        const permissionExistsResults = await Promise.all(ids.map((id) => this.exists(id)))
         return permissionExistsResults.every((exists) => exists)
     }
 }

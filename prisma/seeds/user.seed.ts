@@ -13,23 +13,38 @@ async function hashPassword(password: string): Promise<string> {
 
 async function createAdmin(prisma: PrismaClient) {
     const hashedPassword = await hashPassword('string')
+
+    const adminRoleId: string = (
+        await prisma.role.findFirst({
+            where: {
+                name: 'admin'
+            }
+        })
+    ).id
+
     await prisma.user.upsert({
         where: { email: 'string@gmail.com' },
         update: {},
         create: {
             email: 'string@gmail.com',
-            hashedPassword,
+            password: {
+                create: {
+                    password: hashedPassword
+                }
+            },
+            person: {
+                create: {
+                    firstName: 'string',
+                    lastName: 'string'
+                }
+            },
             twoFactor: false,
-            firstName: 'string',
-            lastName: 'string',
             username: 'string',
-            roleUuid: (
-                await prisma.role.findFirst({
-                    where: {
-                        name: 'admin'
-                    }
-                })
-            ).uuid
+            role: {
+                connect: {
+                    id: adminRoleId
+                }
+            }
         }
     })
 }
