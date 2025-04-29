@@ -29,8 +29,6 @@ model Password {
 model User {
   id String @id @default(uuid())
 
-  avatar String?
-
   person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
   personId String @unique @map("person_id")
 
