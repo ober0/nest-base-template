@@ -126,7 +126,7 @@ export class AuthService {
 
         const user = await this.userService.findOneByEmail(email, true)
 
-        const isValid = await this.passwordService.comparePassword(password, user.hashedPassword)
+        const isValid = await this.passwordService.comparePassword(password, user.password.password)
         if (!isValid) {
             await this.redis.incrementWithTTL(attemptsKey, 1, 600)
             throw new NotFoundException('Неверный email или пароль')
