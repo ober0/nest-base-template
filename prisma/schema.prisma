@@ -39,7 +39,7 @@ model User {
 
   email String @unique
 
-  twoFactor   Boolean @default(true)
+  twoFactor   Boolean @default(false)
   isForbidden Boolean @default(false) @map("is_forbidden")
   isActive    Boolean @default(true) @map("is_active")
 

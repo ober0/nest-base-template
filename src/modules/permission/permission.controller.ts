@@ -18,7 +18,7 @@ export class PermissionController {
 
     @Get()
     @ApiOkResponse({ type: PermissionResponseDto })
-    @HasPermissions(PermissionEnum.PlanGetAll)
+    @HasPermissions(PermissionEnum.PermissionGetAll)
     @ApiOperation({ summary: PermissionSummary.GET_ALL })
     async findAll() {
         return this.permissionService.findAll()
@@ -26,7 +26,7 @@ export class PermissionController {
 
     @Get(':id')
     @ApiOkResponse({ type: PermissionResponseDto })
-    @HasPermissions(PermissionEnum.PlanGet)
+    @HasPermissions(PermissionEnum.PermissionGet)
     @ApiOperation({ summary: PermissionSummary.GET_ONE })
     async findOne(@Param('id') id: string) {
         return this.permissionService.findOne(id)

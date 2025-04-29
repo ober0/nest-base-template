@@ -10,10 +10,9 @@ import { AuthModule } from '../auth/auth.module'
 import { UserModule } from '../user/user.module'
 import { ConfigModule } from '@nestjs/config'
 import config from 'src/config/config'
-import { AvatarModule } from '../user/avatar/avatar.module'
 
 @Module({
-    imports: [PrismaModule, RedisModule, CryptModule, PasswordModule, SmtpModule, UserModule, AuthModule, ConfigModule.forRoot({ isGlobal: true, load: [config] }), AvatarModule],
+    imports: [PrismaModule, RedisModule, CryptModule, PasswordModule, SmtpModule, UserModule, AuthModule, ConfigModule.forRoot({ isGlobal: true, load: [config] })],
     controllers: [AppController],
     providers: [AppService]
 })

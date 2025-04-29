@@ -30,7 +30,8 @@ export class SignUpUserDto {
     @IsString()
     password: string
 
-    @ApiProperty()
+    @ApiProperty({ required: false })
+    @IsOptional()
     @IsPhoneNumber('RU')
     phoneNumber: string
 }

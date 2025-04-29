@@ -39,7 +39,6 @@ async function createAdmin(prisma: PrismaClient) {
                 }
             },
             twoFactor: false,
-            username: 'string',
             role: {
                 connect: {
                     id: adminRoleId

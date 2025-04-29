@@ -38,16 +38,6 @@ export class UserFilterDto {
     @IsOptional()
     @IsArray()
     roleIds: string[]
-
-    @ApiProperty({ required: false })
-    @IsOptional()
-    @IsBoolean()
-    isTrainer: boolean
-
-    @ApiProperty({ required: false })
-    @IsOptional()
-    @IsBoolean()
-    isClient: boolean
 }
 
 export class UserSortDto {
