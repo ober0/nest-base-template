@@ -15,11 +15,13 @@ export class PasswordService {
     }
 
     async validate(password: string): Promise<boolean> {
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/
+        // При необходимости валидировать пароль вернуть
 
-        if (!passwordRegex.test(password)) {
-            throw new BadRequestException('Некорректный пароль')
-        }
+        // const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/
+        //
+        // if (!passwordRegex.test(password)) {
+        //     throw new BadRequestException('Некорректный пароль')
+        // }
         return true
     }
 }
