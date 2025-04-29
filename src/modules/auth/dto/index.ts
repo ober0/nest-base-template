@@ -59,7 +59,7 @@ export class SignInUserDto {
     password: string
 }
 
-export class JwtPayloadDto {
+export class DecodedUser {
     email: string
     id: string
     iat: number
@@ -67,6 +67,11 @@ export class JwtPayloadDto {
     role: {
         name: RolesEnum
     }
+    person: {
+        firstName: string
+        lastName: string
+    }
+    password: string
 }
 
 export class RefreshTokenDto {

@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import { JwtPayloadDto } from '../auth/dto'
 import { ConfigService } from '@nestjs/config'
+import { DecodedUser } from '../auth/dto'
 
 @Injectable()
 export class TokenService {
@@ -24,7 +24,7 @@ export class TokenService {
         )
     }
 
-    async verifyRefreshToken(token: string): Promise<JwtPayloadDto> {
+    async verifyRefreshToken(token: string): Promise<DecodedUser> {
         try {
             return this.jwtService.verify(token, {
                 secret: this.configService.get<string>('REFRESH_SECRET')
