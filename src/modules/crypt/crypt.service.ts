@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common'
 import * as crypto from 'crypto'
+import { ConfigService } from '@nestjs/config'
 
 @Injectable()
 export class CryptService {
@@ -7,8 +8,8 @@ export class CryptService {
     private readonly ivLength = 16
     private readonly secretKey: Buffer
 
-    constructor() {
-        const key = process.env.ENCRYPTION_KEY
+    constructor(private readonly configService: ConfigService) {
+        const key = this.configService.get<string>('ENCRYPTION_KEY')
         if (!key) {
             throw new InternalServerErrorException('ENCRYPTION_KEY не задан в .env')
         }
