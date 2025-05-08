@@ -3,13 +3,16 @@ import { RoleCreateDto, RoleUpdateDto } from './dto'
 import { PermissionService } from '../permission/permission.service'
 import { RoleRepository } from './role.repository'
 import { PrismaService } from '../prisma/prisma.service'
+import { I18nService } from 'nestjs-i18n'
+import { getCurrentLang } from '../../i18n/utils'
 
 @Injectable()
 export class RoleService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly roleRepository: RoleRepository,
-        private readonly permissionService: PermissionService
+        private readonly permissionService: PermissionService,
+        private readonly i18n: I18nService
     ) {}
 
     async create({ permissions, ...roleDto }: RoleCreateDto) {
@@ -64,13 +67,23 @@ export class RoleService {
                 }
             }
         })
-        if (!roleWithPermissions) throw new NotFoundException('Роль не найдена')
+        if (!roleWithPermissions)
+            throw new NotFoundException(
+                this.i18n.t('errors.role.not_found', {
+                    lang: getCurrentLang()
+                })
+            )
         return roleWithPermissions
     }
 
     async findOneByName(name: string) {
         const role = await this.roleRepository.findByName(name)
-        if (!role) throw new NotFoundException('Роль не найдена')
+        if (!role)
+            throw new NotFoundException(
+                this.i18n.t('errors.role.not_found', {
+                    lang: getCurrentLang()
+                })
+            )
         return role
     }
 
@@ -93,7 +106,11 @@ export class RoleService {
             }
         })
         if (!roles.length) {
-            throw new NotFoundException('Роли не найдены')
+            throw new NotFoundException(
+                this.i18n.t('errors.role.not_found_many', {
+                    lang: getCurrentLang()
+                })
+            )
         }
         return roles
     }
@@ -105,19 +122,31 @@ export class RoleService {
 
     private async ensureRoleNameUnique(name: string) {
         if (await this.roleRepository.existsByName(name)) {
-            throw new ConflictException('Роль существует')
+            throw new ConflictException(
+                this.i18n.t('errors.user.exists', {
+                    lang: getCurrentLang()
+                })
+            )
         }
     }
 
     private async ensureRoleExists(id: string) {
         if (!(await this.roleRepository.existsById(id))) {
-            throw new NotFoundException('Роль не найдена')
+            throw new NotFoundException(
+                this.i18n.t('errors.role.not_found', {
+                    lang: getCurrentLang()
+                })
+            )
         }
     }
 
     private async ensurePermissionsAreUnique(permissions: string[]) {
         if (new Set(permissions).size !== permissions.length) {
-            throw new BadRequestException('Дубликат')
+            throw new BadRequestException(
+                this.i18n.t('errors.user.exists', {
+                    lang: getCurrentLang()
+                })
+            )
         }
     }
 

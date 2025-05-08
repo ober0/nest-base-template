@@ -1,0 +1,40 @@
+{
+    "request": {
+        "fetch_error": "Failed to get data"
+    },
+    "bad_request": "Invalid request",
+    "internal_server_error": "Internal server error",
+    "user": {
+        "already_exists": "A user with this email already exists",
+        "not_found": "A user with this data does not exist",
+        "deactivated": "User is not active",
+        "forbidden": "User is blocked",
+        "access_denied": "You do not have sufficient rights to perform this operation"
+    },
+    "jwt": {
+        "invalid": "Invalid bearer token"
+    },
+    "permission": {
+        "not_found": "Permission not found",
+        "not_found_many": "Permissions not found",
+        "duplicate": "Duplicate permission exists"
+    },
+    "role": {
+        "exists": "This role already exists",
+        "not_found": "Role not found",
+        "not_found_many": "Roles not found"
+    },
+    "auth": {
+        "many_attempts": "Many attempts, try again in 10 minutes",
+        "confirm": {
+            "not_exists": "Request the code again",
+            "incorrect_code": "The code is incorrect",
+            "timeout": "Hash is out of date",
+            "action_not_found": "action not found"
+        }
+    },
+    "password": {
+        "invalid": "Invalid password format"
+    }
+
+}

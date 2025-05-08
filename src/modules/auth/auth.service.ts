@@ -7,6 +7,8 @@ import { UserRepository } from '../user/user.repository'
 import { createHash, randomBytes } from 'crypto'
 import { ChangePasswordNoAuthDto, ConfirmChangePasswordDto, ConfirmSignUpUserDto, ResendConfirmCodeDto, SignInUserDto, SignUpResponseUserDto, SignUpUserDto } from './dto'
 import { UserService } from '../user/user.service'
+import { I18nService } from 'nestjs-i18n'
+import { getCurrentLang } from '../../i18n/utils'
 
 @Injectable()
 export class AuthService {
@@ -18,7 +20,8 @@ export class AuthService {
         private readonly redis: RedisService,
         private readonly smtpService: SmtpService,
         private readonly userRepository: UserRepository,
-        private readonly userService: UserService
+        private readonly userService: UserService,
+        private readonly i18n: I18nService
     ) {}
 
     private generateVerificationCode(): number {
@@ -34,7 +37,11 @@ export class AuthService {
     private async ensureUserByEmail(email: string) {
         const user = await this.userRepository.findOneByEmail(email)
         if (user) {
-            throw new ConflictException('Пользователь с таким email уже существует')
+            throw new ConflictException(
+                this.i18n.t('errors.user.already_exists', {
+                    lang: getCurrentLang()
+                })
+            )
         }
     }
 
@@ -61,18 +68,30 @@ export class AuthService {
         const cachedData = await this.redis.get(redisKey)
 
         if (!cachedData || typeof cachedData !== 'string') {
-            throw new NotFoundException('Недействительный или просроченный хэш')
+            throw new NotFoundException(
+                this.i18n.t('errors.auth.confirm.timeout', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         const parsedData = JSON.parse(cachedData)
         const { code: expectedCode, ...rawUserDto } = parsedData
 
         if (Number(expectedCode) !== inputCode) {
-            throw new BadRequestException('Неверный код подтверждения')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.confirm.incorrect_code', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         if (await this.userRepository.existsByEmail(rawUserDto.email)) {
-            throw new ConflictException('Пользователь с таким email существует')
+            throw new ConflictException(
+                this.i18n.t('errors.user.already_exists', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         const [, { id, email }] = await Promise.all([this.redis.delete(redisKey), this.userService.create(rawUserDto)])
@@ -108,7 +127,11 @@ export class AuthService {
 
         const cachedData = await this.redis.get(actionMeta.key)
         if (!cachedData || typeof cachedData !== 'string') {
-            throw new BadRequestException('Время жизни кода истекло')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.confirm.timeout', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         const parsed = JSON.parse(cachedData)
@@ -129,7 +152,11 @@ export class AuthService {
         const isValid = await this.passwordService.comparePassword(password, user.password.password)
         if (!isValid) {
             await this.redis.incrementWithTTL(attemptsKey, 1, 600)
-            throw new NotFoundException('Неверный email или пароль')
+            throw new NotFoundException(
+                this.i18n.t('errors.user.not_found', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         if (!user.twoFactor) {
@@ -157,14 +184,22 @@ export class AuthService {
         const cachedData = await this.redis.get(redisKey)
 
         if (!cachedData || typeof cachedData !== 'string') {
-            throw new BadRequestException('Недействительный или просроченный хэш')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.confirm.timeout', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         const { id, email, code: expectedCode } = JSON.parse(cachedData)
 
         if (Number(expectedCode) !== inputCode) {
             await this.redis.incrementWithTTL(`confirm-attempts-${ip}`, 1, 600)
-            throw new BadRequestException('Неверный код подтверждения')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.confirm.incorrect_code', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         await this.redis.delete(redisKey)
@@ -218,14 +253,22 @@ export class AuthService {
         const cachedData = await this.redis.get(redisKey)
 
         if (!cachedData || typeof cachedData !== 'string') {
-            throw new BadRequestException('Недействительный или просроченный хэш')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.confirm.timeout', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         const { id, password_hash, code: expectedCode } = JSON.parse(cachedData)
 
         if (Number(expectedCode) !== inputCode) {
             await this.redis.incrementWithTTL(`confirm-attempts-${ip}`, 1, 600)
-            throw new BadRequestException('Неверный код')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.confirm.incorrect_code', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         return this.userRepository.updatePassword(id, password_hash)
@@ -234,7 +277,11 @@ export class AuthService {
     private async checkConfirmAttempts(ip: string) {
         const attempts = Number(await this.redis.get(`confirm-attempts-${ip}`)) || 0
         if (attempts >= 5) {
-            throw new BadRequestException('Много попыток')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.many_attempts', {
+                    lang: getCurrentLang()
+                })
+            )
         }
     }
 
@@ -243,7 +290,11 @@ export class AuthService {
         const attempts = Number(await this.redis.get(attemptsKey)) || 0
 
         if (attempts >= 5) {
-            throw new BadRequestException('Слишком много попыток входа')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.many_attempts', {
+                    lang: getCurrentLang()
+                })
+            )
         }
         return attemptsKey
     }

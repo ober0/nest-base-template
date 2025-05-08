@@ -2,12 +2,15 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@
 import { Reflector } from '@nestjs/core'
 import { RolePermissionService } from '../role-permission.service'
 import { PermissionEnum } from 'src/common/constants/permission.enum'
+import { getCurrentLang } from '../../../i18n/utils'
+import { I18nService } from 'nestjs-i18n'
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
     constructor(
         private readonly reflector: Reflector,
-        private readonly rolesPermissionsService: RolePermissionService
+        private readonly rolesPermissionsService: RolePermissionService,
+        private readonly i18n: I18nService
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -18,7 +21,11 @@ export class PermissionGuard implements CanActivate {
         const { user } = context.switchToHttp().getRequest()
         const hasAllPermissions = await this._hasAllPermissions(requiredPermissions, user.id)
         if (!hasAllPermissions) {
-            throw new ForbiddenException('Нет доступа')
+            throw new ForbiddenException(
+                this.i18n.t('errors.user.access_denied', {
+                    lang: getCurrentLang()
+                })
+            )
         }
         return true
     }

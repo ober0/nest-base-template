@@ -11,6 +11,8 @@ import { ConfirmChangePasswordDto, SelfUserUpdateDto, SignUpUserDto, TwoFactorAu
 import { UserSearchDto } from './dto/search.dto'
 import { ConfigService } from '@nestjs/config'
 import { RolesEnum } from '../role/enum/roles.enum'
+import { getCurrentLang } from '../../i18n/utils'
+import { I18nService } from 'nestjs-i18n'
 
 @Injectable()
 export class UserService {
@@ -20,7 +22,8 @@ export class UserService {
         private readonly passwordService: PasswordService,
         private readonly redis: RedisService,
         private readonly smtpService: SmtpService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        private readonly i18n: I18nService
     ) {}
 
     private readonly ATTEMPT_LIMIT: number = this.configService.get<number>('ATTEMPT_LIMIT')
@@ -43,7 +46,11 @@ export class UserService {
     async findOneByEmail(email: string, withPassword = true) {
         const user = await this.userRepository.findOneByEmail(email)
         if (!user) {
-            throw new NotFoundException('Пользователь не найден')
+            throw new NotFoundException(
+                this.i18n.t('errors.user.not_found', {
+                    lang: getCurrentLang()
+                })
+            )
         }
         if (!withPassword) {
             delete user.password
@@ -54,7 +61,11 @@ export class UserService {
     async findOneById(id: string, withPassword = true) {
         const user = await this.userRepository.findOneById(id)
         if (!user) {
-            throw new NotFoundException('Пользователь не найден')
+            throw new NotFoundException(
+                this.i18n.t('errors.user.not_found', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -84,7 +95,11 @@ export class UserService {
         const usedAttempts = await this.redis.get(`confirm-attempts-${ip}`)
         const attempts = Number(usedAttempts)
         if (Number.isNaN(attempts) || attempts >= this.ATTEMPT_LIMIT) {
-            throw new BadRequestException('Много попыток')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.many_attempts', {
+                    lang: getCurrentLang()
+                })
+            )
         }
         return true
     }
@@ -125,14 +140,22 @@ export class UserService {
         }
 
         if (id !== JsonUserData.id) {
-            throw new UnauthorizedException('Нет доступа')
+            throw new UnauthorizedException(
+                this.i18n.t('errors.user.access_denied', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         await this.checkConfirmAttempts(ip)
 
         if (Number(code) !== JsonUserData.code) {
             await this.redis.incrementWithTTL(`confirm-attempts-${ip}`, 1, this.ATTEMPT_TTL)
-            throw new BadRequestException('Неверный код')
+            throw new BadRequestException(
+                this.i18n.t('errors.auth.confirm.incorrect_code', {
+                    lang: getCurrentLang()
+                })
+            )
         }
 
         return this.userRepository.updateTwoFactor(id, { on: JsonUserData.on })
