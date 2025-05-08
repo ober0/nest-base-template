@@ -22,12 +22,10 @@ CREATE TABLE "passwords" (
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
-    "avatar" TEXT,
-    "username" TEXT NOT NULL,
     "person_id" TEXT NOT NULL,
     "password_id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "twoFactor" BOOLEAN NOT NULL DEFAULT true,
+    "twoFactor" BOOLEAN NOT NULL DEFAULT false,
     "is_forbidden" BOOLEAN NOT NULL DEFAULT false,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "role_id" TEXT,

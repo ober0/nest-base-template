@@ -10,9 +10,24 @@ import { AuthModule } from '../auth/auth.module'
 import { UserModule } from '../user/user.module'
 import { ConfigModule } from '@nestjs/config'
 import config from 'src/config/config'
+import { PermissionModule } from '../permission/permission.module'
+import { RoleModule } from '../role/role.module'
+import { RolePermissionModule } from '../role-permission/role-permission.module'
 
 @Module({
-    imports: [PrismaModule, RedisModule, CryptModule, PasswordModule, SmtpModule, UserModule, AuthModule, ConfigModule.forRoot({ isGlobal: true, load: [config] })],
+    imports: [
+        PrismaModule,
+        RedisModule,
+        CryptModule,
+        PasswordModule,
+        SmtpModule,
+        UserModule,
+        PermissionModule,
+        RoleModule,
+        RolePermissionModule,
+        AuthModule,
+        ConfigModule.forRoot({ isGlobal: true, load: [config] })
+    ],
     controllers: [AppController],
     providers: [AppService]
 })
