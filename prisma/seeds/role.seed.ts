@@ -28,7 +28,7 @@ async function createUser(prisma: PrismaClient) {
     await prisma.$transaction(async (tx) => {
         const createdRole = await tx.role.create({ data: { name: 'user' } })
 
-        const userPermissions: PermissionEnum[] = []
+        const userPermissions: PermissionEnum[] = [PermissionEnum.LoginHistorySearch]
 
         const permissions = await tx.permission.findMany({
             where: {
