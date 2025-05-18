@@ -14,6 +14,7 @@ import { PermissionModule } from '../permission/permission.module'
 import { RoleModule } from '../role/role.module'
 import { RolePermissionModule } from '../role-permission/role-permission.module'
 import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n'
+import { LoginHistoryModule } from '../login-history/login-history.module'
 
 @Module({
     imports: [
@@ -38,7 +39,8 @@ import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n'
                 watch: true
             },
             resolvers: [AcceptLanguageResolver]
-        })
+        }),
+        LoginHistoryModule
     ],
     controllers: [AppController],
     providers: [AppService]
