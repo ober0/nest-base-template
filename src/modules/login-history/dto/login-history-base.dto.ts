@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsNotEmpty, IsString } from 'class-validator'
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class LoginHistoryBaseDto {
     @ApiProperty()
@@ -11,4 +11,9 @@ export class LoginHistoryBaseDto {
     @IsString()
     @IsNotEmpty()
     ip: string
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    fingerprint?: string
 }

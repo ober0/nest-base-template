@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { RolePermissionRepository } from './role-permission.repository'
 import { UserService } from '../user/user.service'
+import { logger } from 'nestjs-i18n'
 
 @Injectable()
 export class RolePermissionService {

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpStatus, HttpCode, Get, Query, Req, Patch } from '@nestjs/common'
+import { Controller, Post, Body, HttpStatus, HttpCode, Get, Query, Req, Patch, Ip } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import {
@@ -39,16 +39,18 @@ export class AuthController {
     @ApiOkResponse({ type: SignInResponseUserDto })
     @ApiOperation({ summary: AuthSummary.SIGNIN })
     @HttpCode(HttpStatus.OK)
-    async signIn(@Body() signInDto: SignInUserDto, @Req() request: Request) {
-        return this.authService.signIn(signInDto, request.ip)
+    async signIn(@Body() signInDto: SignInUserDto, @Req() request: Request, @Ip() ip: string) {
+        const userAgent: string = request.headers['user-agent']
+        return this.authService.signIn(signInDto, { ip, userAgent })
     }
 
     @Post('signin/confirm')
     @ApiOkResponse({ type: LoginResponseDto })
     @ApiOperation({ summary: AuthSummary.SIGNIN_CONFIRM })
     @HttpCode(HttpStatus.OK)
-    async confirmSignIn(@Body() confirmUserDto: ConfirmSignUpUserDto, @Req() request: Request) {
-        return this.authService.confirmSignIn(confirmUserDto, request.ip)
+    async confirmSignIn(@Body() confirmUserDto: ConfirmSignUpUserDto, @Req() request: Request, @Ip() ip: string) {
+        const userAgent: string = request.headers['user-agent']
+        return this.authService.confirmSignIn(confirmUserDto, { ip, userAgent })
     }
 
     @Post('refresh')

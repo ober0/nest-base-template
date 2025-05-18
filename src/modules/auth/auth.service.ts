@@ -9,6 +9,8 @@ import { ChangePasswordNoAuthDto, ConfirmChangePasswordDto, ConfirmSignUpUserDto
 import { UserService } from '../user/user.service'
 import { I18nService } from 'nestjs-i18n'
 import { getCurrentLang } from '../../i18n/utils'
+import { LoginHistoryService } from '../login-history/login-history.service'
+import { LoginHistoryBaseDto } from '../login-history/dto/login-history-base.dto'
 
 @Injectable()
 export class AuthService {
@@ -21,7 +23,8 @@ export class AuthService {
         private readonly smtpService: SmtpService,
         private readonly userRepository: UserRepository,
         private readonly userService: UserService,
-        private readonly i18n: I18nService
+        private readonly i18n: I18nService,
+        private readonly loginHistoryService: LoginHistoryService
     ) {}
 
     private generateVerificationCode(): number {
@@ -144,7 +147,9 @@ export class AuthService {
         return { msg: 'Код отправляется', hash }
     }
 
-    async signIn({ email, password }: SignInUserDto, ip: string) {
+    async signIn({ email, password, fingerprint }: SignInUserDto, info: LoginHistoryBaseDto) {
+        const ip = info.ip
+
         const attemptsKey = await this.checkSignInAttempts(ip)
 
         const user = await this.userService.findOneByEmail(email, true)
@@ -160,6 +165,12 @@ export class AuthService {
         }
 
         if (!user.twoFactor) {
+            await this.loginHistoryService.create({
+                userId: user.id,
+                ...info,
+                fingerprint
+            })
+
             return {
                 accessToken: await this.tokenService.generateAccessToken(user.id, user.email),
                 refreshToken: await this.tokenService.generateRefreshToken(user.id, user.email),
@@ -177,7 +188,8 @@ export class AuthService {
         return { msg: 'Код отправляется', hash }
     }
 
-    async confirmSignIn({ hash, code: inputCode }: ConfirmSignUpUserDto, ip: string) {
+    async confirmSignIn({ hash, code: inputCode, fingerprint }: ConfirmSignUpUserDto, info: LoginHistoryBaseDto) {
+        const ip = info.ip
         await this.checkConfirmAttempts(ip)
 
         const redisKey = `signin-${hash}`
@@ -207,6 +219,12 @@ export class AuthService {
         const user = await this.userService.findOneById(id, false)
 
         this.logger.log(`Пользователь ${email} выполнил вход`)
+
+        await this.loginHistoryService.create({
+            userId: user.id,
+            ...info,
+            fingerprint
+        })
 
         return {
             accessToken: await this.tokenService.generateAccessToken(user.id, user.email),

@@ -10,7 +10,6 @@ export class LoginHistoryService {
     constructor(private readonly repository: LoginHistoryRepository) {}
 
     async search(dto: LoginHistorySearchDto) {
-        console.log(dto)
         const [data, count] = await Promise.all([this.repository.search(dto), this.repository.count(dto)])
 
         return { data, count }

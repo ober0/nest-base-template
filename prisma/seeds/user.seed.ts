@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { PermissionEnum } from '../../src/common/constants/permission.enum'
 import * as bcrypt from 'bcryptjs'
+import { RolesEnum } from '../../src/modules/role/enum/roles.enum'
 
 export async function seedUser(prisma: PrismaClient) {
     await createAdmin(prisma)
@@ -17,7 +18,7 @@ async function createAdmin(prisma: PrismaClient) {
     const adminRoleId: string = (
         await prisma.role.findFirst({
             where: {
-                name: 'admin'
+                name: RolesEnum.Admin
             }
         })
     ).id

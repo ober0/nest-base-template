@@ -79,14 +79,15 @@ model RolePermission {
 }
 
 model LoginHistory {
-  id         String   @id @default(uuid()) @map("id")
-  userAgent  String   @map("user_agent")
-  ip         String   @map("ip")
-  userId     String   @map("user_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
-  frontendId Int      @default(autoincrement()) @map("frontend_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid()) @map("id")
+  userAgent   String   @map("user_agent")
+  ip          String   @map("ip")
+  fingerprint String?
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  frontendId  Int      @default(autoincrement()) @map("frontend_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("login_histories")
 }

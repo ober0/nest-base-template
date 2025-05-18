@@ -40,6 +40,11 @@ export class ConfirmSignUpUserDto extends HashDto {
     @ApiProperty()
     @IsNumber()
     code: number
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    fingerprint?: string
 }
 
 export class SignUpResponseUserDto extends HashDto {
@@ -57,6 +62,11 @@ export class SignInUserDto {
     @ApiProperty()
     @IsString()
     password: string
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    fingerprint?: string
 }
 
 export class DecodedUser {

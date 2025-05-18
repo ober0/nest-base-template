@@ -7,9 +7,10 @@ import { RedisModule } from '../redis/redis.module'
 import { CryptModule } from '../crypt/crypt.module'
 import { PasswordModule } from '../password/password.module'
 import { SmtpModule } from '../smtp/smtp.module'
+import { LoginHistoryModule } from '../login-history/login-history.module'
 
 @Module({
-    imports: [forwardRef(() => UserModule), TokenModule, PasswordModule, CryptModule, RedisModule, SmtpModule],
+    imports: [TokenModule, PasswordModule, CryptModule, RedisModule, SmtpModule, LoginHistoryModule],
     controllers: [AuthController],
     providers: [AuthService],
     exports: [AuthService]
