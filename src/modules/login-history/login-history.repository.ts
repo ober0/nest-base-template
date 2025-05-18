@@ -22,7 +22,7 @@ export class LoginHistoryRepository {
     async search(data: LoginHistorySearchDto) {
         return this.prisma.loginHistory.findMany({
             where: {
-                ...mapSearch(data.filters),
+                ...mapSearch(data.filters, [], data.query, ['user.person.firstName', 'user.person.lastName', 'user.email', 'ip', 'userAgent']),
                 user: {
                     ...mapSearch(data.filters?.user)
                 }
@@ -36,7 +36,7 @@ export class LoginHistoryRepository {
     async count(data: LoginHistorySearchDto) {
         return this.prisma.loginHistory.count({
             where: {
-                ...mapSearch(data.filters),
+                ...mapSearch(data.filters, [], data.query, ['user.person.firstName', 'user.person.lastName', 'user.email', 'ip', 'userAgent']),
                 user: {
                     ...mapSearch(data.filters?.user)
                 }

@@ -21,20 +21,15 @@ export class LoginHistorySortDto {
     @IsOptional()
     @IsEnum(SortTypes)
     userAgent?: SortTypes
-
-    @ApiProperty({ type: UserSortDto })
-    @IsOptional()
-    @ValidateNested()
-    user?: UserSortDto
 }
 
 export class LoginHistoryFiltersDto extends PartialType(LoginHistoryBaseDto) {
-    @ApiProperty({ type: OmitType(UserFilterDto, ['isActive', 'isForbidden']) })
-    @Type(() => OmitType(UserFilterDto, ['isActive', 'isForbidden']))
+    @ApiProperty({ type: OmitType(UserFilterDto, ['isActive', 'isForbidden', 'firstName', 'lastName', 'twoFactor']) })
+    @Type(() => OmitType(UserFilterDto, ['isActive', 'isForbidden', 'firstName', 'lastName', 'twoFactor']))
     @IsOptional()
     @ValidateNested()
     @IsObject()
-    user?: Omit<UserFilterDto, 'isActive' | 'isForbidden'>
+    user?: Omit<UserFilterDto, 'isActive' | 'isForbidden' | 'firstName' | 'lastName' | 'twoFactor'>
 }
 
 export class LoginHistorySearchDto extends SearchBaseDto<LoginHistoryFiltersDto, LoginHistorySortDto> {
