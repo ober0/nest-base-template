@@ -97,7 +97,7 @@ export class AuthService {
             )
         }
 
-        const [, { id, email }] = await Promise.all([this.redis.delete(redisKey), this.userService.create(rawUserDto)])
+        const [, { id, email }] = await Promise.all([this.redis.del(redisKey), this.userService.create(rawUserDto)])
 
         this.logger.log(`Пользователь ${email} успешно зарегистрирован`)
 
@@ -214,7 +214,7 @@ export class AuthService {
             )
         }
 
-        await this.redis.delete(redisKey)
+        await this.redis.del(redisKey)
 
         const user = await this.userService.findOneById(id, false)
 

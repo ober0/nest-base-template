@@ -28,11 +28,12 @@ export class RedisService {
         }
     }
 
-    async delete(key: string): Promise<void> {
-        try {
-            await this.redisClient.del(key)
-        } catch (error) {
-            this.logger.error(`Ошибка при удалении из Redis для ключа: ${key}`, error)
+    async del(key: string | string[]): Promise<number | number[]> {
+        if (typeof key === 'string') {
+            return this.redisClient.del(key)
+        } else {
+            const data: number[] = await Promise.all(key.map(async (key: string) => await this.redisClient.del(key)))
+            return data
         }
     }
 
@@ -49,5 +50,18 @@ export class RedisService {
             this.logger.error(`Ошибка при увеличении значения с TTL в Redis для ключа: ${key}`, error)
             throw error
         }
+    }
+
+    async scanKeysByPrefix(prefix: string) {
+        let cursor = '0'
+        const foundKeys: string[] = []
+
+        do {
+            const [nextCursor, keys] = await this.redisClient.scan(cursor, 'MATCH', prefix, 'COUNT', 100)
+            cursor = nextCursor
+            foundKeys.push(...keys)
+        } while (cursor !== '0')
+
+        return foundKeys
     }
 }
