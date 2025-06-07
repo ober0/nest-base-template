@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common'
 import 'reflect-metadata'
 import { RedisService } from '../../modules/redis/redis.service'
-import { isValidDto } from '../utils/is-valid-dto'
+import { RolesEnum } from '../../modules/role/enum/roles.enum'
 
 export class CacheableOptions {
     keyPrefix: string
@@ -29,10 +29,15 @@ export function Cacheable(options: CacheableOptions) {
             if (options.withUser) {
                 user = args.at(options?.userIndex ?? 0)
                 // await isValidDto(JwtPayloadDto, user)
-                acceptedArgs = args.filter((item, index) => options.includedIndexes?.includes(index) && item.index !== 0)
+                //убрать если админу нужен кэш с withUser = true
+                if (user.role.name === RolesEnum.Admin) {
+                    return await originalMethod.apply(this, args)
+                } else {
+                    acceptedArgs = args.filter((item, index) => options.includedIndexes?.includes(index) && index !== options.userIndex)
 
-                keySuffix = JSON.stringify(acceptedArgs)
-                cacheKey = `${options.keyPrefix}:user-uuid:${user.uuid}:${keySuffix}`
+                    keySuffix = JSON.stringify(acceptedArgs)
+                    cacheKey = `${options.keyPrefix}:user-uuid:${user.uuid}:${keySuffix}`
+                }
             } else {
                 acceptedArgs = args.filter((item, index) => options.includedIndexes?.includes(index))
 

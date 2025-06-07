@@ -13,7 +13,7 @@ const logger: Logger = new Logger('ClearCacheOptions')
 async function deleteCache(redisService: RedisService, prefix: string, user?: any) {
     let cacheKey: string
     if (user) {
-        // await isValidDto(UserDo, user)
+        // await isValidDto(JwtPayloadDto, user)
         cacheKey = `${prefix}:user-uuid:${user.uuid}:*`
     } else {
         cacheKey = `${prefix}:all:*`
