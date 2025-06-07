@@ -4,12 +4,20 @@ import { RedisService } from '../../modules/redis/redis.service'
 
 export class ClearCacheOptions {
     keyPrefix: string | string[]
+    withUser?: boolean
+    userIndex?: number
 }
 
 const logger: Logger = new Logger('ClearCacheOptions')
 
-async function deleteCache(redisService: RedisService, prefix: string) {
-    const cacheKey = `${prefix}:*`
+async function deleteCache(redisService: RedisService, prefix: string, user?: any) {
+    let cacheKey: string
+    if (user) {
+        // await isValidDto(UserDo, user)
+        cacheKey = `${prefix}:user-uuid:${user.uuid}:*`
+    } else {
+        cacheKey = `${prefix}:all:*`
+    }
 
     const cachedKeys: string[] = await redisService.scanKeysByPrefix(cacheKey)
     if (cachedKeys) {
@@ -27,7 +35,7 @@ export function ClearCache(options: ClearCacheOptions) {
 
             const prefixes = Array.isArray(options.keyPrefix) ? options.keyPrefix : [options.keyPrefix]
 
-            await Promise.all(prefixes.map((prefix) => deleteCache(redisService, prefix)))
+            await Promise.all(prefixes.map((prefix) => deleteCache(redisService, prefix, args?.at(options?.userIndex ?? 0) ?? null)))
 
             return await originalMethod.apply(this, args)
         }
